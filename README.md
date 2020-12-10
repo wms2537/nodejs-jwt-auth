@@ -71,6 +71,29 @@ Note that you have to recreate the index of the collection if you updated it.
 ```
 
 ## **Usage**
+### Keypair
+Put your private key (.key) in the .private folder and public key (.pub) in the .public folder. You can also generate them with following code
+```javascript
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { publicKey, privateKey } = crypto.generateKeyPairSync('dsa', {
+  modulusLength: 256,
+  publicKeyEncoding: {
+    type: 'spki',
+    format: 'pem'
+  },
+  privateKeyEncoding: {
+    type: 'pkcs8',
+    format: 'pem',
+  }
+});
+const kid = crypto.createHash("sha256")
+  .update(publicKey)
+  .digest("hex");
+fs.writeFileSync(path.join(__dirname, '.public', `${kid}.pub`), publicKey);
+fs.writeFileSync(path.join(__dirname, '.private', `${kid}.key`), privateKey);
+```
 ### Environment Variables
 * PORT
   * http port to serve the backend
