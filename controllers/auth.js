@@ -126,7 +126,7 @@ exports.getPublicKey = async (req, res, next) => {
     try {
       await fs.access(keyPath);
     } catch (err) {
-      const error = new Error('Key not found.');
+      const error = new Error('Key not found, please refresh accessToken.');
       error.statusCode = 404;
       throw error;
     }

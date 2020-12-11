@@ -1,0 +1,11 @@
+
+sudo: required
+services:
+  - docker
+
+after_success:
+  - docker build -t wms2537/nodejs-jwt-auth ./
+  # Log in to the docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # Take those images and push them to docker hub
+  - docker push wms2537/nodejs-jwt-auth

@@ -1,33 +1,32 @@
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
 const http = require('http');
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
+const cron = require('cron');
+
+const { resetKeypair } = require('./utils/keypair');
+
+resetKeypair();
+// reset keypair after some time
+// ┌───────────── second (0 - 59)
+// | ┌───────────── minute(0 - 59)
+// | │ ┌───────────── hour(0 - 23)
+// | │ │ ┌───────────── day of the month(1 - 31)
+// | │ │ │ ┌───────────── month(1 - 12)
+// | │ │ │ │ ┌───────────── day of the week(0 - 6)(Sunday to Saturday;
+// | │ │ │ │ │                                   7 is also Sunday on some systems)
+// | │ │ │ │ │
+// | │ │ │ │ │
+// * * * * * *
+const cronJob = cron.job("0 0 0 * * *", function () {
+  resetKeypair();
+  console.info('key-pair update job completed');
+});
+cronJob.start();
 // const multer = require('multer');
 
 const authRoutes = require('./routes/auth');
-const { fstat } = require('fs');
 const app = express();
-
-// TODO: implement key rotation logic
-// const { publicKey, privateKey } = crypto.generateKeyPairSync('dsa', {
-//   modulusLength: 256,
-//   publicKeyEncoding: {
-//     type: 'spki',
-//     format: 'pem'
-//   },
-//   privateKeyEncoding: {
-//     type: 'pkcs8',
-//     format: 'pem',
-//   }
-// });
-// const kid = crypto.createHash("sha256")
-//   .update(publicKey)
-//   .digest("hex");
-// fs.writeFileSync(path.join(__dirname, '.public', `${kid}.pub`), publicKey);
-// fs.writeFileSync(path.join(__dirname, '.private', `${kid}.key`), privateKey);
 
 // const fileStorage = multer.diskStorage({
 //   destination: (req, file, cb) => {
@@ -49,7 +48,6 @@ const app = express();
 //   }
 // };
 
-// app.use(bodyParser.urlencoded()); // x-www-form-urlencoded <form>
 app.use(bodyParser.json()); // application/json
 // app.use(
 //   multer({

@@ -13,3 +13,4 @@ services:
     environment:
       - PORT=5000
       - DATABASE_URL=YOUR_MONGODB_DATABASE_CONNECTION_URL
+      - NUM_KEYS=5

@@ -5,6 +5,10 @@ We use two collections, one for users and another for tokens. Token refreshing i
 Access token expiry and refresh token expory can be tuned in the files controllers/auth.js and models/token.js.
 
 Note that you have to recreate the index of the collection if you updated it.
+
+Key rotation is also implemented, signing keys are changed everyday, this can be modified in index.js.
+
+A sample middleware can be found in middlewares/is-auth.js
 ## **API Reference**
 ### POST /signup
 #### Request Body
@@ -99,6 +103,8 @@ fs.writeFileSync(path.join(__dirname, '.private', `${kid}.key`), privateKey);
   * http port to serve the backend
 * DATABASE_URL
   * mongodb connection url
+* NUM_KEYS
+  * number of signing keys to generate
 ### Docker
 Dockerfile.dev spawns up a dev server with nodemon for development.
 

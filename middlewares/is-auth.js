@@ -1,20 +1,7 @@
 const jwt = require('jsonwebtoken');
+const axios = require('axios');
 
-const jwksClient = require('jwks-rsa');
-
-const client = jwksClient({
-  strictSsl: false, // Default value
-  rateLimit: true,
-  jwksUri: `http://localhost:${process.env.PORT || 8080}/.well-known/jwks.json`,
-  timeout: 30000, // Defaults to 30s
-});
-
-// const kid = 'RkI5MjI5OUY5ODc1N0Q4QzM0OUYzNkVGMTJDOUEzQkFCOTU3NjE2Rg';
-// client.getSigningKey(kid, (err, key) => {
-//   const signingKey = key.getPublicKey();
-
-//   // Now I can use this to configure my Express or Hapi middleware
-// });
+const BACKEND_URL = 'http://localhost:5000';
 
 exports.isAuth = async (req, res, next) => {
   try {
@@ -27,12 +14,12 @@ exports.isAuth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.decode(token, {
       complete: true,
-      algorithm: 'RS256',
+      algorithm: 'ES256',
     });
     const kid = decoded.header.kid;
-    const key = await client.getSigningKeyAsync(kid);
-    const decodedToken = jwt.verify(token, key.rsaPublicKey, {
-      algorithms: ['RS256']
+    const key = await axios.get(`${BACKEND_URL}/auth/getPublicKey/${kid}`);
+    const decodedToken = jwt.verify(token, key.data.publicKey, {
+      algorithms: ['ES256']
     }, );
     if (!decodedToken) {
       const error = new Error('Not authenticated.');
@@ -46,25 +33,5 @@ exports.isAuth = async (req, res, next) => {
       err.statusCode = 500;
     }
     next(err);
-  }
-};
-
-exports.isAuthWS = async (token) => {
-  try {
-    const decoded = jwt.decode(token, {
-      complete: true,
-      algorithm: 'RS256',
-    });
-    const kid = decoded.header.kid;
-    const key = await client.getSigningKeyAsync(kid);
-    const decodedToken = jwt.verify(token, key.rsaPublicKey, {
-      algorithms: ['RS256']
-    }, );
-    if (!decodedToken) {
-      return false;
-    }
-    return decodedToken.userId;
-  } catch (err) {
-    return false;
   }
 };
