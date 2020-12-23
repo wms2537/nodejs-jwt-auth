@@ -2,7 +2,7 @@ const http = require('http');
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-const cron = require('cron');
+const cron = require('node-cron');
 
 const { resetKeypair } = require('./utils/keypair');
 
@@ -18,7 +18,7 @@ resetKeypair();
 // | │ │ │ │ │
 // | │ │ │ │ │
 // * * * * * *
-const cronJob = cron.job("0 0 0 * * *", function () {
+const cronJob = cron.schedule("0 0 0 * * *", function() {
   resetKeypair();
   console.info('key-pair update job completed');
 });

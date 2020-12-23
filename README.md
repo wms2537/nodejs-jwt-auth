@@ -101,10 +101,12 @@ fs.writeFileSync(path.join(__dirname, '.private', `${kid}.key`), privateKey);
 ### Environment Variables
 * PORT
   * http port to serve the backend
+  * default: 8080
 * DATABASE_URL
   * mongodb connection url
 * NUM_KEYS
   * number of signing keys to generate
+  * default: 5
 ### Docker
 Dockerfile.dev spawns up a dev server with nodemon for development.
 

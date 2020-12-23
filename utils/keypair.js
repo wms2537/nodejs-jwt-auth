@@ -7,6 +7,8 @@ exports.resetKeypair = () => {
   for (let i = 0; i < numKeys; i++) {
     fs.rmdirSync(path.join(__dirname, '..', '.public'), { recursive: true });
     fs.rmdirSync(path.join(__dirname, '..', '.private'), { recursive: true });
+    fs.mkdirSync(path.join(__dirname, '..', '.public'));
+    fs.mkdirSync(path.join(__dirname, '..', '.private'));
     const { publicKey, privateKey } = crypto.generateKeyPairSync('dsa', {
       modulusLength: 256,
       publicKeyEncoding: {
