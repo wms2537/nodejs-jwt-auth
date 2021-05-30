@@ -48,7 +48,7 @@ const app = express();
 //   }
 // };
 
-app.use(bodyParser.json()); // application/json
+app.use(express.json()); // application/json
 // app.use(
 //   multer({
 //     fileFilter: fileFilter
@@ -86,6 +86,6 @@ mongoose
   )
   .then(result => {
     console.log('Connected to Database!')
-    server.listen(process.env.PORT || 8080);
+    server.listen(80);
   })
   .catch(err => console.log(err));

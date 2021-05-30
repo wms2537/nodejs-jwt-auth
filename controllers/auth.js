@@ -13,15 +13,22 @@ const ACCESS_TOKEN_EXPIRY = 24 * 60 * 60 * 1000;
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000;
 const User = require('../models/user');
 const Token = require('../models/token');
-const user = require('../models/user');
+const { validateToken } = require('../utils/hcaptcha');
 
-exports.signup = async (req, res, next) => {
+exports.signup = async(req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       const error = new Error('Validation failed.');
       error.statusCode = 422;
       error.data = errors.array();
+      throw error;
+    }
+    const token = req.body.token;
+    const tokenValidationResult = await validateToken(token);
+    if (!tokenValidationResult) {
+      const error = new Error('Captcha Validation failed.');
+      error.statusCode = 422;
       throw error;
     }
     const email = req.body.email;
@@ -53,13 +60,21 @@ exports.signup = async (req, res, next) => {
   }
 };
 
-exports.login = async (req, res, next) => {
+exports.login = async(req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       const error = new Error('Validation failed.');
       error.statusCode = 422;
       error.data = errors.array();
+      throw error;
+    }
+
+    const token = req.body.token;
+    const tokenValidationResult = await validateToken(token);
+    if (!tokenValidationResult) {
+      const error = new Error('Captcha Validation failed.');
+      error.statusCode = 422;
       throw error;
     }
     const email = req.body.email;
@@ -119,7 +134,7 @@ exports.login = async (req, res, next) => {
   }
 };
 
-exports.getPublicKey = async (req, res, next) => {
+exports.getPublicKey = async(req, res, next) => {
   try {
     const keyId = req.params.kid;
     const keyPath = path.join(__dirname, '..', '.public', keyId + '.pub')
@@ -142,7 +157,7 @@ exports.getPublicKey = async (req, res, next) => {
   }
 }
 
-exports.refreshToken = async (req, res, next) => {
+exports.refreshToken = async(req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -163,7 +178,7 @@ exports.refreshToken = async (req, res, next) => {
       throw error;
     }
     const keys = await fs.readdir(path.join(__dirname, '..', '.private'));
-    const key = keys[Math.round(Math.random() * (keys.length-1))];
+    const key = keys[Math.round(Math.random() * (keys.length - 1))];
     const jwt_secret = await fs.readFile(path.join(__dirname, '..', '.private', key));
     const newAccessToken = jwt.sign({
         username: token.userId.username,
