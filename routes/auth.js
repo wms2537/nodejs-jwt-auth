@@ -9,37 +9,39 @@ const authController = require('../controllers/auth');
 const router = express.Router();
 
 router.post(
-  '/signup',
-  [
+  '/signup', [
     body('email')
-      .isEmail()
-      .withMessage('Please enter a valid email.')
-      .custom((value, {
-        req
-      }) => {
-        return User.findOne({
-          email: value
-        }).then(userDoc => {
-          if (userDoc) {
-            return Promise.reject('E-Mail address already exists!');
-          }
-        });
-      })
-      .normalizeEmail(),
+    .isEmail()
+    .withMessage('Please enter a valid email.')
+    .custom((value, {
+      req
+    }) => {
+      return User.findOne({
+        email: value
+      }).then(userDoc => {
+        if (userDoc) {
+          return Promise.reject('E-Mail address already exists!');
+        }
+      });
+    })
+    .normalizeEmail(),
     body('password')
-      .trim()
-      .isLength({
-        min: 5
-      }),
+    .trim()
+    .isLength({
+      min: 5
+    }),
     body('firstName')
-      .trim()
-      .notEmpty(),
+    .trim()
+    .notEmpty(),
     body('lastName')
-      .trim()
-      .notEmpty(),
+    .trim()
+    .notEmpty(),
     body('phoneNumber')
-      .trim()
-      .notEmpty()
+    .trim()
+    .notEmpty(),
+    body('token')
+    .trim()
+    .notEmpty()
   ],
   authController.signup
 );
@@ -52,7 +54,10 @@ router.post('/login', [
   .trim()
   .isLength({
     min: 5
-  })
+  }),
+  body('token')
+  .trim()
+  .notEmpty()
 ], authController.login);
 
 router.get('/publicKey/:kid', authController.getPublicKey);
