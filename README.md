@@ -1,4 +1,4 @@
-# Nodejs REST API JWT Authentication Backend ![Build Status](https://api.travis-ci.org/wms2537/nodejs-jwt-auth.svg?branch=main&status=created)
+# Nodejs REST API JWT Authentication Backend [![Build Status](https://jenkins.wmtech.cc/job/nodejs-jwt-auth/job/main/badge/icon)](https://jenkins.wmtech.cc/job/nodejs-jwt-auth/job/main/)
 A REST API jwt authentication backend using nodejs and express. This code uses mongoDB as a database. Docker is supported.
 
 We use two collections, one for users and another for tokens. Token refreshing is supported, expired token will be discarded using TTL index of mongoDB.
