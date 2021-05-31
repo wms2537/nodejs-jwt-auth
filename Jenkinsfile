@@ -3,6 +3,7 @@ pipeline {
     registry = 'wms2537/'
     registryCredential = 'DOCKERHUB'
     SERVER_IP = credentials('ALICLOUD_ECS_HK_IP')
+    MONGODB_WMTECH = credentials('MONGODB_WMTECH')
   }
   agent any
   stages {
@@ -32,7 +33,7 @@ pipeline {
       steps {
         sshagent(credentials:['ALICLOUD_HONG_KONG_SERVER_KEY']) {
             sh ('scp -o StrictHostKeyChecking=no -r ./deploy root@$SERVER_IP:/root/nodejs-jwt-auth')
-            sh ('ssh -o StrictHostKeyChecking=no root@$SERVER_IP \"export BUILD_NUMBER=$BUILD_NUMBER && cd /root/nodejs-jwt-auth/deploy && sh ./deploy.sh\"')
+            sh ('ssh -o StrictHostKeyChecking=no root@$SERVER_IP \"export BUILD_NUMBER=$BUILD_NUMBER && export DATABASE_URL=$MONGODB_WMTECH && cd /root/nodejs-jwt-auth/deploy && sh ./deploy.sh\"')
         }
       }
     }
