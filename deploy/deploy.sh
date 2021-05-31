@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker-compose up -d
+docker-compose -f /root/nodejs-jwt-auth/deploy/docker-compose.yaml up -d
