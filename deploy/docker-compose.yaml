@@ -3,9 +3,6 @@ version: "3"
 services:
   backend:
     image: wms2537/nodejs-jwt-auth:${BUILD_NUMBER}
-    volumes:
-      - /app/node_modules
-      - ./:/app
     expose: 
       - 80
     environment:
