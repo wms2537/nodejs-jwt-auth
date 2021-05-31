@@ -5,8 +5,10 @@ const crypto = require('crypto');
 exports.resetKeypair = () => {
   const numKeys = process.env.NUM_KEYS || 5;
   for (let i = 0; i < numKeys; i++) {
-    fs.rmdirSync(path.join(__dirname, '..', '.public'), { recursive: true });
-    fs.rmdirSync(path.join(__dirname, '..', '.private'), { recursive: true });
+    if (fs.existsSync(path.join(__dirname, '..', '.public')))
+      fs.rmdirSync(path.join(__dirname, '..', '.public'), { recursive: true });
+    if (fs.existsSync(path.join(__dirname, '..', '.private')))
+      fs.rmdirSync(path.join(__dirname, '..', '.private'), { recursive: true });
     fs.mkdirSync(path.join(__dirname, '..', '.public'));
     fs.mkdirSync(path.join(__dirname, '..', '.private'));
     const { publicKey, privateKey } = crypto.generateKeyPairSync('dsa', {
