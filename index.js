@@ -82,7 +82,7 @@ const server = http.createServer(app);
 
 mongoose
   .connect(
-    process.env.DATABASE_URL
+    process.env.DATABASE_URL, { useNewUrlParser: true }
   )
   .then(result => {
     console.log('Connected to Database!')
