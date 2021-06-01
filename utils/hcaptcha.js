@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const BACKEND_URL = process.env.HCAPTCHA_VALIDATION_SERVER_URL;
+const BACKEND_URL = "https://hcaptcha.wmtech.cc";
 
 exports.validateToken = async(token) => {
   if (!token) {
