@@ -20,7 +20,7 @@ router.post(
         email: value
       }).then(userDoc => {
         if (userDoc) {
-          return Promise.reject('E-Mail address already exists!');
+          return Promise.reject('E-Mail address already registered!');
         }
       });
     })
@@ -38,7 +38,18 @@ router.post(
     .notEmpty(),
     body('phoneNumber')
     .trim()
-    .notEmpty(),
+    .notEmpty()
+    .custom((value, {
+      req
+    }) => {
+      return User.findOne({
+        phoneNumber: value
+      }).then(userDoc => {
+        if (userDoc) {
+          return Promise.reject('Phone number already registered!');
+        }
+      });
+    }),
     body('token')
     .trim()
     .notEmpty()
