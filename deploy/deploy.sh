@@ -1,5 +1,13 @@
 #!/bin/bash
 
-BUILD_NUMBER=$1 
-DATABASE_URL=$2 
+while getopts b:d: flag
+do
+    case "${flag}" in
+        b) buildNum=${OPTARG};;
+        d) dbUrl=${OPTARG};;
+    esac
+done
+
+BUILD_NUMBER=$buildNum
+DATABASE_URL=$dbUrl
 docker-compose up -d --build
