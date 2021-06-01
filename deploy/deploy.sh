@@ -10,4 +10,4 @@ done
 
 BUILD_NUMBER=$buildNum
 DATABASE_URL=$dbUrl
-docker-compose up -d --build
+docker-compose -f /root/nodejs-jwt-auth/deploy/docker-compose.yaml up -d --build
