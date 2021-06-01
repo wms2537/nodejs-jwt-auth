@@ -21,7 +21,7 @@ exports.signup = async(req, res, next) => {
     if (!errors.isEmpty()) {
       const error = new Error('Validation failed.');
       error.statusCode = 422;
-      error.data = errors.array();
+      error.data = errors.array().map(e => `Error in ${e.param}:${e.msg}`).join('\n');
       throw error;
     }
     const token = req.body.token;
@@ -66,7 +66,7 @@ exports.login = async(req, res, next) => {
     if (!errors.isEmpty()) {
       const error = new Error('Validation failed.');
       error.statusCode = 422;
-      error.data = errors.array();
+      error.data = errors.array().map(e => `Error in ${e.param}:${e.msg}`).join('\n');
       throw error;
     }
 
@@ -163,7 +163,7 @@ exports.refreshToken = async(req, res, next) => {
     if (!errors.isEmpty()) {
       const error = new Error('Validation failed.');
       error.statusCode = 422;
-      error.data = errors.array();
+      error.data = errors.array().map(e => `Error in ${e.param}:${e.msg}`).join('\n');
       throw error;
     }
     const accessToken = req.body.accessToken;
