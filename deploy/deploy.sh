@@ -8,6 +8,4 @@ do
     esac
 done
 
-BUILD_NUMBER=$buildNum
-DATABASE_URL=$dbUrl
-docker-compose -f /root/nodejs-jwt-auth/deploy/docker-compose.yaml up -d --build
+BUILD_NUMBER=$buildNum DATABASE_URL=$dbUrl docker-compose -f /root/nodejs-jwt-auth/deploy/docker-compose.yaml up -d --build
