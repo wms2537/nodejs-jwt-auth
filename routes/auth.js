@@ -71,6 +71,10 @@ router.post('/login', [
   .notEmpty()
 ], authController.login);
 
+router.get('/emailAvailability/:email', authController.getEmailAvailability);
+
+router.get('/phoneNumberAvailability/:phoneNumber', authController.getPhoneNumberAvailability);
+
 router.get('/publicKey/:kid', authController.getPublicKey);
 
 router.post('/refreshToken', [

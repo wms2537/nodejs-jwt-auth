@@ -157,6 +157,50 @@ exports.getPublicKey = async(req, res, next) => {
   }
 }
 
+exports.getEmailAvailability = async(req, res, next) => {
+  try {
+    const email = req.params.email;
+    const user = User.findOne({
+      email
+    });
+    if (user) {
+      const error = new Error('Email is registered.');
+      error.statusCode = 422;
+      throw error;
+    }
+    res.status(200).json({
+      message: 'Email available'
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+}
+
+exports.getPhoneNumberAvailability = async(req, res, next) => {
+  try {
+    const phoneNumber = req.params.phoneNumber;
+    const user = User.findOne({
+      phoneNumber
+    });
+    if (user) {
+      const error = new Error('Phone number is registered.');
+      error.statusCode = 422;
+      throw error;
+    }
+    res.status(200).json({
+      message: 'Phone number available'
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+}
+
 exports.refreshToken = async(req, res, next) => {
   try {
     const errors = validationResult(req);
