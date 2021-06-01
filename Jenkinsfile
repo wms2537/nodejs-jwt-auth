@@ -33,7 +33,7 @@ pipeline {
       steps {
         sshagent(credentials:['ALICLOUD_HONG_KONG_SERVER_KEY']) {
             sh ('scp -o StrictHostKeyChecking=no -r ./deploy root@$SERVER_IP:/root/nodejs-jwt-auth')
-            sh ('ssh -o StrictHostKeyChecking=no root@$SERVER_IP \"cd /root/nodejs-jwt-auth/deploy && bash deploy.sh -b $BUILD_NUMBER -d $MONGODB_WMTECH\"')
+            sh ('ssh -t -o StrictHostKeyChecking=no root@$SERVER_IP \"cd /root/nodejs-jwt-auth/deploy ; bash deploy.sh -b $BUILD_NUMBER -d $MONGODB_WMTECH\"')
         }
       }
     }
