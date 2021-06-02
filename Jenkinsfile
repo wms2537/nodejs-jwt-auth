@@ -10,8 +10,7 @@ pipeline {
     stage('Build Images') {
       steps {
         script {
-          serverImage = docker.build(registry + 'nodejs-jwt-auth', './server')
-          clientImage = docker.build(registry + 'nodejs-jwt-auth-client', './client')
+          dockerImage = docker.build(registry + 'nodejs-jwt-auth', './')
         }
       }
     }
@@ -19,10 +18,8 @@ pipeline {
       steps {
         script {
           docker.withRegistry('', registryCredential ) {
-            serverImage.push("${env.BUILD_NUMBER}")
-            serverImage.push('latest')
-            clientImage.push("${env.BUILD_NUMBER}")
-            clientImage.push('latest')
+            dockerImage.push("${env.BUILD_NUMBER}")
+            dockerImage.push('latest')
           }
         }
       }
@@ -30,7 +27,6 @@ pipeline {
     stage('Remove Unused Docker Image') {
       steps {
         sh "docker rmi ${registry}nodejs-jwt-auth"
-        sh "docker rmi ${registry}nodejs-jwt-auth-client"
       }
     }
     stage('Deploy Images') {
