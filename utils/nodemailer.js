@@ -28,9 +28,8 @@ exports.sendVerificationEmail = async(firstName, email, token) => {
         <p>Thank you for registering. Please confirm your email by clicking on the following link</p>
         <a href=http://auth.wmtech.cc/verifyEmail/${token}> Click here</a>
         </div>`;
+    await transporter.sendMail(mailOptions);
   } catch (error) {
 
   }
 }
-
-transporter.sendMail(mailOptions);
