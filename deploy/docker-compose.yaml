@@ -1,0 +1,29 @@
+version: "3"
+
+services:
+  nginx:
+    depends_on:
+      - backend
+    restart: always
+    image: wms2537/nodejs-jwt-auth-client:${BUILD_NUMBER}
+    expose:
+      - 80
+    environment: 
+      VIRTUAL_HOST: auth.wmtech.cc
+      LETSENCRYPT_HOST: auth.wmtech.cc
+      LETSENCRYPT_EMAIL: swmeng@yes.my
+    container_name: auth-nodejs-client
+  backend:
+    image: wms2537/nodejs-jwt-auth:${BUILD_NUMBER}
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      NUM_KEYS: 5
+      PORT: 5000
+    restart: unless-stopped
+    container_name: auth-nodejs-backend
+
+
+networks:
+  default:
+    external:
+      name: nginx-proxy
