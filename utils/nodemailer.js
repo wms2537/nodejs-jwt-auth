@@ -13,8 +13,8 @@ const transporter = nodemailer.createTransport({
 });
 
 const defaultMailOptions = {
-  from: 'WMTech <noreply.swmengappdev@gmail.com>',
-  to: 'noreply.swmengappdev@gmail.com',
+  from: `WMTech <noreply.${process.env.MAIL_USERNAME}>`,
+  replyTo: `noreply.${process.env.MAIL_USERNAME}`,
   subject: 'WMTech',
 };
 
