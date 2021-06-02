@@ -233,7 +233,7 @@ exports.sendPasswordResetEmail = async(req, res, next) => {
     const rndString = crypto.randomBytes(64).toString('hex') + ':' + (new Date()).toISOString();
     user.emailVerificationToken = rndString;
     await user.save();
-    const token = userId + ':' + rndString;
+    const token = user._id + ':' + rndString;
     await sendPasswordResetEmail(user.firstName, user.email, token);
     res.status(200).json({
       message: 'Success'
