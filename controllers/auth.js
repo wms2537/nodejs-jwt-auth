@@ -48,8 +48,8 @@ exports.signup = async(req, res, next) => {
       emailVerificationToken: rndString
     });
     const result = await user.save();
-    const token = result._id + ':' + rndString;
-    await sendVerificationEmail(firstName, email, token);
+    const verificationToken = result._id + ':' + rndString;
+    await sendVerificationEmail(firstName, email, verificationToken);
 
     res.status(201).json({
       message: 'User created!',
