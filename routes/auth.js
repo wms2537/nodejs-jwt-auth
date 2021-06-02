@@ -78,7 +78,7 @@ router.get('/sendVerificationEmail', isAuth, authController.sendVerificationEmai
 
 router.get('/verifyEmail/:token', authController.verifyEmail);
 
-router.get('/sendPasswordResetEmail/:email', isAuth, authController.sendPasswordResetEmail);
+router.get('/sendPasswordResetEmail/:email', authController.sendPasswordResetEmail);
 
 router.get('/resetPassword/:token', (req, res, next) => res.sendFile(path.join(__dirname, '..', 'templates', 'reset_password.html')));
 
