@@ -80,7 +80,7 @@ router.get('/verifyEmail/:token', authController.verifyEmail);
 
 router.get('/sendPasswordResetEmail/:email', authController.sendPasswordResetEmail);
 
-router.get('/resetPassword/:token', (req, res, next) => res.sendFile(path.join(__dirname, '..', 'templates', 'reset_password.html')));
+router.get('/resetPassword', (req, res, next) => res.sendFile(path.join(__dirname, '..', 'templates', 'reset_password.html')));
 
 router.post('/resetPassword/:token', authController.resetPassword);
 
