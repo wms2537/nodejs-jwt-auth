@@ -5,6 +5,7 @@ const {
 
 const User = require('../models/user');
 const authController = require('../controllers/auth');
+const { isAuth } = require('../middlewares/is-auth');
 
 const router = express.Router();
 
@@ -70,6 +71,10 @@ router.post('/login', [
   .trim()
   .notEmpty()
 ], authController.login);
+
+router.get('/sendVerificationEmail', isAuth, authController.sendVerificationEmail);
+
+router.get('/verifyEmail/:token', authController.verifyEmail);
 
 router.get('/emailAvailability/:email', authController.getEmailAvailability);
 
