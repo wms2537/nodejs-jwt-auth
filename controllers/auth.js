@@ -170,11 +170,13 @@ exports.sendVerificationEmail = async(req, res, next) => {
   try {
     const userId = req.userId;
     const user = await User.findById(userId);
-    const rndString = crypto.randomBytes(64).toString('hex') + ':' + (new Date()).toISOString();
-    user.emailVerificationToken = rndString;
-    await user.save();
-    const token = userId + ':' + rndString;
-    await sendVerificationEmail(user.firstName, user.email, token);
+    if (!user.emailVerified) {
+      const rndString = crypto.randomBytes(64).toString('hex') + ':' + (new Date()).toISOString();
+      user.emailVerificationToken = rndString;
+      await user.save();
+      const token = userId + ':' + rndString;
+      await sendVerificationEmail(user.firstName, user.email, token);
+    }
     res.status(200).json({
       message: 'Success'
     });
@@ -194,6 +196,8 @@ exports.verifyEmail = async(req, res, next) => {
     const user = await User.findById(userId);
     res.set('Content-Type', 'text/html');
     if (user.emailVerified) {
+      user.emailVerificationToken = undefined;
+      await user.save();
       res.send(`<html>
 
 <head>
@@ -366,6 +370,9 @@ exports.verifyEmail = async(req, res, next) => {
 
 </html>`));
     }
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    await user.save();
     res.send(`<html>
 
 <head>
