@@ -22,6 +22,14 @@ const userSchema = new Schema({
     type: String,
     required: true
   },
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  phoneNumberVerified: {
+    type: Boolean,
+    default: false
+  },
   activeStatus: {
     type: Boolean,
     default: false
@@ -30,7 +38,7 @@ const userSchema = new Schema({
   timestamps: true
 });
 
-userSchema.index({email: 'unique'});
+userSchema.index({ email: 'unique' });
 
 
 module.exports = mongoose.model('User', userSchema);
