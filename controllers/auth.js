@@ -261,7 +261,7 @@ exports.resetPassword = async(req, res, next) => {
     if (Math.abs(dateNow.getTime() - createdDate.getTime) > 1000 * 60 * 15) {
       res.send(Buffer.from(getFailedTemplate('Email Verification Failed', 'Token Expired!')));
     }
-    const password = req.query.password;
+    const password = req.query.psw;
     const hashedPw = await bcrypt.hash(password, 12);
     user.password = hashedPw;
     user.passwordChangeToken = undefined;
