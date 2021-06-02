@@ -264,6 +264,7 @@ exports.resetPassword = async(req, res, next) => {
     const password = req.query.password;
     const hashedPw = await bcrypt.hash(password, 12);
     user.password = hashedPw;
+    user.passwordChangeToken = undefined;
     await user.save();
     res.send(Buffer.from(getSuccessTemplate('Password Update Success', 'You can login with your new password now!')));
   } catch (err) {
