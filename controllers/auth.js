@@ -119,12 +119,12 @@ exports.login = async(req, res, next) => {
       }
     );
     const refreshToken = crypto.randomBytes(128).toString('base64');
-    token = Token({
+    const mytoken = Token({
       accessToken,
       refreshToken,
       userId: user._id
     });
-    await token.save();
+    await mytoken.save();
     res.status(200).json({
       accessToken,
       refreshToken,
