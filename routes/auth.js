@@ -78,7 +78,10 @@ router.get('/sendVerificationEmail', isAuth, authController.sendVerificationEmai
 
 router.get('/verifyEmail/:token', authController.verifyEmail);
 
-router.get('/sendPasswordResetEmail/:email', authController.sendPasswordResetEmail);
+router.post('/sendPasswordResetEmail/:email', [body('token')
+  .trim()
+  .notEmpty()
+], authController.sendPasswordResetEmail);
 
 router.get('/resetPassword/:token', authController.resetPassword);
 

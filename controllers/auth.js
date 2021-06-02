@@ -223,6 +223,13 @@ exports.verifyEmail = async(req, res, next) => {
 
 exports.sendPasswordResetEmail = async(req, res, next) => {
   try {
+    const token = req.body.token;
+    const tokenValidationResult = await validateToken(token);
+    if (!tokenValidationResult) {
+      const error = new Error('Captcha Validation failed.');
+      error.statusCode = 422;
+      throw error;
+    }
     const email = req.params.email;
     const user = await User.findOne({ email });
     if (!user) {
