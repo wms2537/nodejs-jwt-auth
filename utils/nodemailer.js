@@ -26,7 +26,7 @@ exports.sendVerificationEmail = async(firstName, email, token) => {
     mailOptions.html = `<h1>Email Confirmation</h1>
         <h2>Hello ${firstName}</h2>
         <p>Thank you for registering. Please confirm your email by clicking on the following link</p>
-        <a href=http://auth.wmtech.cc/verifyEmail/${token}> Click here</a>
+        <a href=http://auth.wmtech.cc/auth/verifyEmail/${token}> Click here</a>
         </div>`;
     await transporter.sendMail(mailOptions);
   } catch (error) {
