@@ -2,14 +2,20 @@
 A REST API jwt authentication backend using nodejs and express. This code uses mongoDB as a database. Docker is supported.
 
 We use two collections, one for users and another for tokens. Token refreshing is supported, expired token will be discarded using TTL index of mongoDB.
-Access token expiry and refresh token expory can be tuned in the files controllers/auth.js and models/token.js.
+Access token expiry and refresh token expiry can be tuned in the files controllers/auth.js and models/token.js.
 
 Note that you have to recreate the index of the collection if you updated it.
 
 Key rotation is also implemented, signing keys are changed everyday, this can be modified in index.js.
 
 A sample middleware can be found in middlewares/is-auth.js
+
+New users are required to verify their email through a verification link.
+
+Password reset through email is also implemented.
+
 ## **API Reference**
+Here are some main api usage, more details can be found in [routes](routes/auth.js).
 ### POST /signup
 #### Request Body
 ```json
@@ -18,7 +24,8 @@ A sample middleware can be found in middlewares/is-auth.js
     "password": "Te$+12#$",
     "firstName": "Test",
     "lastName": "Test",
-    "phoneNumber": "0123456789"
+    "phoneNumber": "0123456789",
+    "token": "HCAPTCHA_TOKEN"
 }
 ```
 #### Respond
@@ -34,6 +41,7 @@ A sample middleware can be found in middlewares/is-auth.js
 {
     "email": "test@test.com",
     "password": "Te$+12#$",
+    "token": "HCAPTCHA_TOKEN"
 }
 ```
 #### Respond
