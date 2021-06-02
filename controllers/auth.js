@@ -231,7 +231,7 @@ exports.sendPasswordResetEmail = async(req, res, next) => {
       throw error;
     }
     const rndString = crypto.randomBytes(64).toString('hex') + ':' + (new Date()).toISOString();
-    user.emailVerificationToken = rndString;
+    user.passwordChangeToken = rndString;
     await user.save();
     const token = user._id + ':' + rndString;
     await sendPasswordResetEmail(user.firstName, user.email, token);

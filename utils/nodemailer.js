@@ -43,7 +43,7 @@ exports.sendPasswordResetEmail = async(firstName, email, token) => {
     mailOptions.html = `<h1>Password Reset</h1>
         <h2>Hello ${firstName}</h2>
         <p>Reset your password by clicking on the following link within 15 minutes.</p>
-        <a href=http://auth.wmtech.cc/auth/resetPassword/${token}> Click here</a>
+        <a href=http://auth.wmtech.cc/auth/resetPassword?token=${token}> Click here</a>
         <p>This email is auto generated, please do not reply to this email.</p>
         `;
     await transporter.sendMail(mailOptions);
