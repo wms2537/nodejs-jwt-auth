@@ -34,6 +34,9 @@ const userSchema = new Schema({
     type: Boolean,
     default: false
   },
+  emailVerificationToken: {
+    type: String
+  }
 }, {
   timestamps: true
 });

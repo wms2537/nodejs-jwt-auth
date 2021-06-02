@@ -250,7 +250,7 @@ exports.verifyEmail = async(req, res, next) => {
 
 </html>`);
     }
-    if (user.verificationCode !== verificationCode) {
+    if (user.emailVerificationToken !== verificationCode) {
       res.send(Buffer.from(`<html>
 
 <head>
