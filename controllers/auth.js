@@ -98,6 +98,12 @@ exports.login = async(req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
+
+    if (!user.emailVerified) {
+      const error = new Error('Email not verified, please verify on your email!');
+      error.statusCode = 401;
+      throw error;
+    }
     const keys = await fs.readdir(path.join(__dirname, '..', '.private'));
     const key = keys[Math.floor(Math.random() * (keys.length - 1))];
     const jwt_secret = await fs.readFile(path.join(__dirname, '..', '.private', key));
@@ -187,7 +193,7 @@ exports.verifyEmail = async(req, res, next) => {
     const verificationCode = token.join(':');
     const user = await User.findById(userId);
     res.set('Content-Type', 'text/html');
-    if (user.emailVeified) {
+    if (user.emailVerified) {
       res.send(`<html>
 
 <head>
