@@ -1,3 +1,5 @@
+const path = require('path');
+
 const express = require('express');
 const {
   body
@@ -75,6 +77,12 @@ router.post('/login', [
 router.get('/sendVerificationEmail', isAuth, authController.sendVerificationEmail);
 
 router.get('/verifyEmail/:token', authController.verifyEmail);
+
+router.get('/sendPasswordResetEmail/:email', isAuth, authController.sendPasswordResetEmail);
+
+router.get('/resetPassword/:token', (req, res, next) => res.sendFile(path.join(__dirname, '..', 'templates', 'reset_password.html')));
+
+router.post('/resetPassword/:token', authController.resetPassword);
 
 router.get('/emailAvailability/:email', authController.getEmailAvailability);
 
