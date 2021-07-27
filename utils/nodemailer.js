@@ -1,20 +1,18 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: "smtp.wmtech.cc",
+  port: 587,
+  secure: true,
   auth: {
-    type: 'OAuth2',
-    user: process.env.MAIL_USERNAME,
-    pass: process.env.MAIL_PASSWORD,
-    clientId: process.env.OAUTH_CLIENTID,
-    clientSecret: process.env.OAUTH_CLIENT_SECRET,
-    refreshToken: process.env.OAUTH_REFRESH_TOKEN
-  }
+    user: process.env.SMTP_USER,
+    pass: testAccount.SMTP_PASS,
+  },
 });
 
 const defaultMailOptions = {
-  from: `WMTech <noreply.${process.env.MAIL_USERNAME}>`,
-  replyTo: `noreply.${process.env.MAIL_USERNAME}`,
+  from: `WMTech <noreply.wmtech.cc>`,
+  replyTo: `noreply.wmtech.cc}`,
   subject: 'WMTech',
 };
 
