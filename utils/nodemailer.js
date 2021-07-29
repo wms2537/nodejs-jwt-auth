@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
   host: "smtp.wmtech.cc",
-  port: 587,
+  port: 465,
   secure: true,
   auth: {
     user: process.env.SMTP_USER,
@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 const defaultMailOptions = {
   from: `WMTech <noreply.wmtech.cc>`,
-  replyTo: `noreply.wmtech.cc}`,
+  replyTo: `info.wmtech.cc`,
   subject: 'WMTech',
 };
 
