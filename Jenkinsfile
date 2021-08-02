@@ -32,8 +32,8 @@ pipeline {
     stage('Deploy Images') {
       steps {
         sshagent(credentials:['ALICLOUD_HONG_KONG_SERVER_KEY']) {
-            sh ('scp -o StrictHostKeyChecking=no -r ./deploy root@$SERVER_IP:/root/nodejs-jwt-auth/')
-            sh ('ssh -o StrictHostKeyChecking=no root@$SERVER_IP \"export BUILD_NUMBER=$BUILD_NUMBER && cd /root/nodejs-jwt-auth/deploy && bash ./deploy.sh\"')
+            sh ('scp -o StrictHostKeyChecking=no -r ./deploy root@$SERVER_IP:/root/nodejs-jwt-auth')
+            sh ('ssh -o StrictHostKeyChecking=no root@$SERVER_IP \"export BUILD_NUMBER=$BUILD_NUMBER && cd /root/nodejs-jwt-auth && bash ./deploy.sh\"')
         }
       }
     }
