@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 const defaultMailOptions = {
   from: `WMTech <noreply.wmtech.cc>`,
-  replyTo: `info.wmtech.cc`,
+  replyTo: `info@wmtech.cc`,
   subject: 'WMTech',
 };
 
@@ -24,7 +24,7 @@ exports.sendVerificationEmail = async(firstName, email, token) => {
     mailOptions.html = `<h1>Email Confirmation</h1>
         <h2>Hello ${firstName}</h2>
         <p>Thank you for registering. Please confirm your email by clicking on the following link within 15 minutes.</p>
-        <a href=http://auth.wmtech.cc/auth/verifyEmail/${token}> Click here</a>
+        <a href=${process.env.VIRTUAL_HOST}/auth/verifyEmail/${token}> Click here</a>
         <p>This email is auto generated, please do not reply to this email.</p>
         `;
     await transporter.sendMail(mailOptions);
@@ -41,7 +41,7 @@ exports.sendPasswordResetEmail = async(firstName, email, token) => {
     mailOptions.html = `<h1>Password Reset</h1>
         <h2>Hello ${firstName}</h2>
         <p>Reset your password by clicking on the following link within 15 minutes.</p>
-        <a href=http://auth.wmtech.cc/auth/resetPassword?token=${token}> Click here</a>
+        <a href=${process.env.VIRTUAL_HOST}/auth/resetPassword?token=${token}> Click here</a>
         <p>This email is auto generated, please do not reply to this email.</p>
         `;
     await transporter.sendMail(mailOptions);

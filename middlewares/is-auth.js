@@ -1,7 +1,8 @@
-const jwt = require('jsonwebtoken');
 const axios = require('axios');
-
-const BACKEND_URL = 'http://localhost:5000';
+const { createRemoteJWKSet } = require('jose/jwks/remote');
+const { jwtVerify } = require('jose/jwt/verify');
+const BACKEND_URL = 'http://localhost:80';
+const JWKS = createRemoteJWKSet(new URL(`${BACKEND_URL}/auth/publicKey`));
 
 exports.isAuth = async (req, res, next) => {
   try {
@@ -12,21 +13,18 @@ exports.isAuth = async (req, res, next) => {
       throw error;
     }
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.decode(token, {
-      complete: true,
-      algorithm: 'ES256',
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: 'wmtech',
+      audience: 'auth.wmtech.cc'
     });
-    const kid = decoded.header.kid;
-    const key = await axios.get(`${BACKEND_URL}/auth/getPublicKey/${kid}`);
-    const decodedToken = jwt.verify(token, key.data.publicKey, {
-      algorithms: ['ES256']
-    }, );
-    if (!decodedToken) {
+
+    if (!payload) {
       const error = new Error('Not authenticated.');
       error.statusCode = 401;
       throw error;
     }
-    req.userId = decodedToken.userId;
+    req.userId = payload['userId'];
+    console.log(req.userId);
     next();
   } catch (err) {
     if(!err.statusCode){

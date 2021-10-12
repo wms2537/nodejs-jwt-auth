@@ -40,6 +40,12 @@ const userSchema = new Schema({
   passwordChangeToken: {
     type: String
   },
+  googleAuthId: {
+    type: String,
+  },
+  appleAuthId: {
+    type: String,
+  }
 }, {
   timestamps: true
 });

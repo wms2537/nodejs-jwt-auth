@@ -6,16 +6,22 @@ const {
   validationResult
 } = require('express-validator');
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
+const { importJWK } = require('jose/key/import');
+const { SignJWT } = require('jose/jwt/sign');
+const { createRemoteJWKSet } = require('jose/jwks/remote');
+const { jwtVerify } = require('jose/jwt/verify');
+const { OAuth2Client } = require('google-auth-library');
 
 // const JWT_SECRET = fs.readFileSync('./.private/rsaPrivateKey.key');
-const ACCESS_TOKEN_EXPIRY = 24 * 60 * 60 * 1000;
+const ACCESS_TOKEN_EXPIRY = 24*3600*1000;
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000;
 const User = require('../models/user');
 const Token = require('../models/token');
 const { validateToken } = require('../utils/hcaptcha');
 const { sendVerificationEmail, sendPasswordResetEmail } = require('../utils/nodemailer');
 const { getSuccessTemplate, getFailedTemplate } = require('../templates/templates');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 exports.signup = async(req, res, next) => {
   try {
@@ -105,19 +111,20 @@ exports.login = async(req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
-    const keys = await fs.readdir(path.join(__dirname, '..', '.private'));
-    const key = keys[Math.floor(Math.random() * (keys.length - 1))];
-    const jwt_secret = await fs.readFile(path.join(__dirname, '..', '.private', key));
-    const accessToken = jwt.sign({
-        email: user.email,
-        userId: user._id.toString()
-      },
-      jwt_secret, {
-        keyid: key.split('.')[0],
-        algorithm: 'ES256',
-        expiresIn: ACCESS_TOKEN_EXPIRY.toString()
-      }
-    );
+    const jwks = JSON.parse((await fs.readFile(path.join(__dirname, '..', '.private', 'keys.json'))).toString());
+    const jwk = jwks[Math.floor(Math.random() * jwks.length)];
+    const privateKey = await importJWK(jwk, 'EdDSA');
+    const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_EXPIRY);
+    const accessToken = await new SignJWT({
+      email: user.email,
+      userId: user._id.toString(),
+     })
+      .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
+      .setIssuedAt()
+      .setIssuer('wmtech')
+      .setAudience('auth.wmtech.cc')
+      .setExpirationTime(accessTokenExpiry.getTime())
+      .sign(privateKey);
     const refreshToken = crypto.randomBytes(128).toString('base64');
     const mytoken = Token({
       accessToken,
@@ -129,12 +136,246 @@ exports.login = async(req, res, next) => {
       accessToken,
       refreshToken,
       userId: user._id.toString(),
-      accessTokenExpiry: (new Date(Date.now() + ACCESS_TOKEN_EXPIRY)).toISOString(),
+      accessTokenExpiry: accessTokenExpiry.toISOString(),
       refreshTokenExpiry: (new Date(Date.now() + REFRESH_TOKEN_EXPIRY)).toISOString(),
       firstName: user.firstName,
       lastName: user.lastName,
       phoneNumber: user.phoneNumber,
-      activeStatus: user.activeStatus
+      activeStatus: user.activeStatus,
+      googleAuthEnabled: user.googleAuthId !== undefined,
+      appleAuthEnabled: user.appleAuthId !== undefined,
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.signInWithApple = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const error = new Error('Validation failed.');
+      error.statusCode = 422;
+      error.data = errors.array().map(e => `Error in ${e.param}: ${e.msg}`).join('\n');
+      throw error;
+    }
+    const JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
+    const { payload } = await jwtVerify(req.body.token, JWKS);
+    if(!payload['email_verified']) {
+      const error = new Error('Email not verified (Apple)!');
+      error.statusCode = 401;
+      throw error;
+    }
+    const user = await User.findOne({
+      email: payload['email']
+    });
+    if (!user) {
+      return res.status(200).json({message: 'Sign Up'});
+    }
+    const jwks = JSON.parse((await fs.readFile(path.join(__dirname, '..', '.private', 'keys.json'))).toString());
+    const jwk = jwks[Math.floor(Math.random() * jwks.length)];
+    const privateKey = await importJWK(jwk, 'EdDSA');
+    const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_EXPIRY);
+    const accessToken = await new SignJWT({
+      email: user.email,
+      userId: user._id.toString(),
+    })
+      .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
+      .setIssuedAt()
+      .setIssuer('wmtech')
+      .setAudience('auth.wmtech.cc')
+      .setExpirationTime(accessTokenExpiry.getTime())
+      .sign(privateKey);
+    const refreshToken = crypto.randomBytes(128).toString('base64');
+    const mytoken = Token({
+      accessToken,
+      refreshToken,
+      userId: user._id
+    });
+    await mytoken.save();
+    res.status(200).json({
+      accessToken,
+      refreshToken,
+      userId: user._id.toString(),
+      accessTokenExpiry: accessTokenExpiry.toISOString(),
+      refreshTokenExpiry: (new Date(Date.now() + REFRESH_TOKEN_EXPIRY)).toISOString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      activeStatus: user.activeStatus,
+      googleAuthEnabled: user.googleAuthId !== undefined,
+      appleAuthEnabled: user.appleAuthId !== undefined,
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.signUpWithApple = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const error = new Error('Validation failed.');
+      error.statusCode = 422;
+      error.data = errors.array().map(e => `Error in ${e.param}: ${e.msg}`).join('\n');
+      throw error;
+    }
+    const token = req.body.token;
+    const JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
+    const { payload } = await jwtVerify(token, JWKS);
+    if (!payload['email_verified']) {
+      const error = new Error('Email not verified (Apple)!');
+      error.statusCode = 401;
+      throw error;
+    }
+    const email = payload['email'];
+    const password = req.body.password;
+    const firstName = req.body.firstName;
+    const lastName = req.body.lastName;
+    const phoneNumber = req.body.phoneNumber;
+    const hashedPw = await bcrypt.hash(password, 12);
+    const user = new User({
+      email,
+      password: hashedPw,
+      firstName,
+      lastName,
+      phoneNumber,
+      emailVerified: true,
+      appleAuthId: payload['sub']
+    });
+    const result = await user.save();
+    res.status(201).json({
+      message: 'User created!',
+      userId: result._id
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.signInWithGoogle = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const error = new Error('Validation failed.');
+      error.statusCode = 422;
+      error.data = errors.array().map(e => `Error in ${e.param}: ${e.msg}`).join('\n');
+      throw error;
+    }
+    const token = req.body.token;
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload['email_verified']) {
+      const error = new Error('Email not verified (Google)!');
+      error.statusCode = 401;
+      throw error;
+    }
+    // If request specified a G Suite domain:
+    // const domain = payload['hd'];
+    const email = payload['email'];
+    const user = await User.findOne({
+      email: email
+    });
+    if (!user) {
+      return res.status(200).json({ 
+        message: 'Sign Up',
+        firstName: payload['given_name'],
+        lastName: payload['family_name'],
+      });
+    }
+    const jwks = JSON.parse((await fs.readFile(path.join(__dirname, '..', '.private', 'keys.json'))).toString());
+    const jwk = jwks[Math.floor(Math.random() * jwks.length)];
+    const privateKey = await importJWK(jwk, 'EdDSA');
+    const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_EXPIRY);
+    const accessToken = await new SignJWT({
+      email: user.email,
+      userId: user._id.toString(),
+    })
+      .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
+      .setIssuedAt()
+      .setIssuer('wmtech')
+      .setAudience('auth.wmtech.cc')
+      .setExpirationTime(accessTokenExpiry.getTime())
+      .sign(privateKey);
+    const refreshToken = crypto.randomBytes(128).toString('base64');
+    const mytoken = Token({
+      accessToken,
+      refreshToken,
+      userId: user._id
+    });
+    await mytoken.save();
+    res.status(200).json({
+      accessToken,
+      refreshToken,
+      userId: user._id.toString(),
+      accessTokenExpiry: accessTokenExpiry.toISOString(),
+      refreshTokenExpiry: (new Date(Date.now() + REFRESH_TOKEN_EXPIRY)).toISOString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      activeStatus: user.activeStatus,
+      googleAuthEnabled: user.googleAuthId !== undefined,
+      appleAuthEnabled: user.appleAuthId !== undefined,
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.signUpWithGoogle = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const error = new Error('Validation failed.');
+      error.statusCode = 422;
+      error.data = errors.array().map(e => `Error in ${e.param}: ${e.msg}`).join('\n');
+      throw error;
+    }
+    const token = req.body.token;
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload['email_verified']) {
+      const error = new Error('Email not verified (Google)!');
+      error.statusCode = 401;
+      throw error;
+    }
+    const email = payload['email'];
+    const password = req.body.password;
+    const firstName = req.body.firstName;
+    const lastName = req.body.lastName;
+    const phoneNumber = req.body.phoneNumber;
+    const hashedPw = await bcrypt.hash(password, 12);
+    const user = new User({
+      email,
+      password: hashedPw,
+      firstName,
+      lastName,
+      phoneNumber,
+      emailVerified: true,
+      googleAuthId: payload['sub']
+    });
+    const result = await user.save();
+    res.status(201).json({
+      message: 'User created!',
+      userId: result._id
     });
   } catch (err) {
     if (!err.statusCode) {
@@ -146,19 +387,9 @@ exports.login = async(req, res, next) => {
 
 exports.getPublicKey = async(req, res, next) => {
   try {
-    const keyId = req.params.kid;
-    const keyPath = path.join(__dirname, '..', '.public', keyId + '.pub')
-    try {
-      await fs.access(keyPath);
-    } catch (err) {
-      const error = new Error('Key not found, please refresh accessToken.');
-      error.statusCode = 404;
-      throw error;
-    }
-    const publicKey = (await fs.readFile(keyPath)).toString();
-    res.status(200).json({
-      publicKey
-    });
+    const keyPath = path.join(__dirname, '..', '.public', 'keys.json')
+    const publicKeys = JSON.parse((await fs.readFile(keyPath)).toString());
+    res.status(200).json({keys: publicKeys});
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -346,19 +577,19 @@ exports.refreshToken = async(req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
-    const keys = await fs.readdir(path.join(__dirname, '..', '.private'));
-    const key = keys[Math.round(Math.random() * (keys.length - 1))];
-    const jwt_secret = await fs.readFile(path.join(__dirname, '..', '.private', key));
-    const newAccessToken = jwt.sign({
-        username: token.userId.username,
-        userId: token.userId._id.toString()
-      },
-      jwt_secret, {
-        keyid: key.split('.')[0],
-        algorithm: 'ES256',
-        expiresIn: ACCESS_TOKEN_EXPIRY.toString()
-      }
-    );
+    const jwks = JSON.parse((await fs.readFile(path.join(__dirname, '..', '.private', 'keys.json'))).toString());
+    const jwk = jwks[Math.floor(Math.random() * jwks.length)];
+    const privateKey = await importJWK(jwk, 'EdDSA');
+    const newAccessToken = await new SignJWT({
+      username: token.userId.username,
+      userId: token.userId._id.toString()
+    })
+      .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
+      .setIssuedAt()
+      .setIssuer('wmtech')
+      .setAudience('auth.wmtech.cc')
+      .setExpirationTime(ACCESS_TOKEN_EXPIRY)
+      .sign(privateKey);
     token.accessToken = newAccessToken;
     await token.save();
     res.status(200).json({

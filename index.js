@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const http = require('http');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -6,7 +8,10 @@ const cron = require('node-cron');
 
 const { resetKeypair } = require('./utils/keypair');
 
-resetKeypair();
+if (!fs.existsSync(path.join(__dirname, '.public', 'keys.json')) || !fs.existsSync(path.join(__dirname, '.private', 'keys.json'))){
+  resetKeypair();
+  console.info('key-pair generated');
+}
 // reset keypair after some time
 // ┌───────────── second (0 - 59)
 // | ┌───────────── minute(0 - 59)
@@ -18,7 +23,7 @@ resetKeypair();
 // | │ │ │ │ │
 // | │ │ │ │ │
 // * * * * * *
-const cronJob = cron.schedule("0 0 0 * * *", function() {
+const cronJob = cron.schedule("0 56 23 * * *", function() {
   resetKeypair();
   console.info('key-pair update job completed');
 });

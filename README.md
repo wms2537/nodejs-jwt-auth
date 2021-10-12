@@ -6,13 +6,94 @@ Access token expiry and refresh token expiry can be tuned in the files controlle
 
 Note that you have to recreate the index of the collection if you updated it.
 
-Key rotation is also implemented, signing keys are changed everyday, this can be modified in index.js.
+Key rotation is also implemented, signing keys are changed everyday, this cron task can be modified in index.js.
 
-A sample middleware can be found in middlewares/is-auth.js
+A sample middleware can be found in middlewares/is-auth.js, where 3rd party apps request the public JWKS to verify the tokens.
 
 New users are required to verify their email through a verification link.
 
 Password reset through email is also implemented.
+
+### Features
+* Email and Passsword Sign In
+* Google Sign In
+* Apple Sign In
+* Hcaptcha Validation
+* Email verification
+* Email password reset
+
+## **Usage**
+### Keypair
+Keypair generation is done in [utils/keypair.js](utils/keypair.js). If you intend to change the algorithm used, please make sure you update them at signing and verifying respectively.
+
+### JWT Audience and issuer
+Please change the audience and issuer claim on signing and verifying tokens:
+```js
+// Signing
+const accessToken = await new SignJWT({
+  email: user.email,
+  userId: user._id.toString(),
+  })
+  .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
+  .setIssuedAt()
+  .setIssuer('wmtech')
+  .setAudience('auth.wmtech.cc')
+  .setExpirationTime(accessTokenExpiry.getTime())
+  .sign(privateKey);
+
+// Verifying
+const { payload } = await jwtVerify(token, JWKS, {
+  issuer: 'wmtech',
+  audience: 'auth.wmtech.cc'
+});
+```
+
+### Hcaptcha
+This repo uses hcaptcha validation. Please configure hcaptcha in your frontend respectively. A sample hcaptcha server can be found [here](https://github.com/wms2537/hcaptcha).
+
+### Nodemailer
+Modify the `defaultMailOptions` in [utils/nodemailer.js](utils/nodemailer.js).
+```js
+const defaultMailOptions = {
+  from: `WMTech <noreply.wmtech.cc>`,
+  replyTo: `info@wmtech.cc`,
+  subject: 'WMTech',
+};
+```
+
+### Environment Variables
+* SMTP_USER
+  * http port to serve the backend
+* SMTP_PASS
+  * http port to serve the backend
+* VIRTUAL_HOST
+  * url to host this auth service
+* HCAPTCHA_HOST
+  * url to hcaptcha backend
+* GOOGLE_CLIENT_ID
+  * Google OAuth2 Client ID (For sign in with google)
+* PORT
+  * http port to serve the backend
+  * default: 80
+* DATABASE_URL
+  * mongodb connection url
+* NUM_KEYS
+  * number of signing keys to generate
+  * default: 5
+Instead of hardcoding these values into your docker-compose.yaml, you can create a `.env` file like below:
+```sh
+DATABASE_URL=<your mongodb connection string>
+SMTP_USER=noreply@example.com
+SMTP_PASS=<password>
+VIRTUAL_HOST=https://auth.example.com
+HCAPTCHA_HOST=https://hcaptcha.example.com
+GOOGLE_CLIENT_ID=<your google client id>
+```
+### Docker
+Dockerfile.dev spawns up a dev server with nodemon for development.
+
+Dockerfile is for deployment.
+
 
 ## **API Reference**
 Here are some main api usage, more details can be found in [routes](routes/auth.js).
@@ -58,11 +139,42 @@ Here are some main api usage, more details can be found in [routes](routes/auth.
     "activeStatus": false
 }
 ```
-### GET /publicKey/:kid
+### GET /publicKey
 #### Respond
 ```json
 {
-    "publicKey": "-----BEGIN PUBLIC KEY-----\nMIH4MIGwBgcqhkjOOAQBMIGkAkEAj4aTuWBoIXeqR4KnU+1n23d5yi/7dLR6YKow\n4eAU3V/H3slcaLJmckYZZH/zhFM8IzFdpnWqoA+hzYjMl3DarwIdAIsq1rlf4jgg\nrqv6CXRWIRtZOv5vQOWFJ+rpKlMCQBFL896oT0lPsxhs7P8zMsBrR18M1OE+BhN1\nWuDwUXnQaNeLZCrWS7TDLOt6Q5t8gIklQi5I1Za2bqMOmy74HF0DQwACQG/j5qi0\nzNuV4Xep++BKjOwLv4y9mKvS92BiK2sAnTufLqGI/ZEZqr0MineNpmVXbxBoSgWw\nWnPKL7a42Lamo/Q=\n-----END PUBLIC KEY-----\n"
+  "keys": [
+    {
+      "crv": "Ed25519",
+      "x": "26aHwydSBgeHHwVZbXMNcodveH8ykSn9MkUAHz54ytU",
+      "kty": "OKP",
+      "kid": "_GZeiv4vxFZ2OQZa8h7EL748wdwM-FUKT1K4UNnI7dU"
+    },
+    {
+      "crv": "Ed25519",
+      "x": "DGyZGOJ7jtSlZmghTnuzRxbKT6bL_2ElbIMitxqfQ-s",
+      "kty": "OKP",
+      "kid": "EPH8CmjuBBTEfLu8pUdE1p9zxtdBSk2YBsT4Yb9xSxc"
+    },
+    {
+      "crv": "Ed25519",
+      "x": "Vm2Oxs3Lklh80VYPKoT0oEQJePcUP-MMcrZDAtA_lUI",
+      "kty": "OKP",
+      "kid": "FvUPAADB8_zbDM1q8YPsRM1YwfAYxdvj-nuC-MIBg7I"
+    },
+    {
+      "crv": "Ed25519",
+      "x": "ymFWqJ6PUhxAcZkdd1WyTpDOuJvXTEe7grQgh_TVoGM",
+      "kty": "OKP",
+      "kid": "ioHpY3gFXb-HQYBp1GErKLLmPxcUR46sjFn9nphpoCE"
+    },
+    {
+      "crv": "Ed25519",
+      "x": "IR3eArUllksgC_1s1nHKZCbLz2_wdcz-5va8mEKKZy0",
+      "kty": "OKP",
+      "kid": "_I0VXkaAbQ4HFWk261OZG1wbuRBDLCRAJ6IiW4xBx18"
+    }
+  ]
 }
 ```
 ### POST /refreshToken
@@ -81,43 +193,3 @@ Here are some main api usage, more details can be found in [routes](routes/auth.
     "accessTokenExpiry": "2020-12-11T13:58:25.687Z"
 }
 ```
-
-## **Usage**
-### Keypair
-Put your private key (.key) in the .private folder and public key (.pub) in the .public folder. You can also generate them with following code
-```javascript
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const { publicKey, privateKey } = crypto.generateKeyPairSync('dsa', {
-  modulusLength: 256,
-  publicKeyEncoding: {
-    type: 'spki',
-    format: 'pem'
-  },
-  privateKeyEncoding: {
-    type: 'pkcs8',
-    format: 'pem',
-  }
-});
-const kid = crypto.createHash("sha256")
-  .update(publicKey)
-  .digest("hex");
-fs.writeFileSync(path.join(__dirname, '.public', `${kid}.pub`), publicKey);
-fs.writeFileSync(path.join(__dirname, '.private', `${kid}.key`), privateKey);
-```
-### Environment Variables
-* PORT
-  * http port to serve the backend
-  * default: 8080
-* DATABASE_URL
-  * mongodb connection url
-* NUM_KEYS
-  * number of signing keys to generate
-  * default: 5
-### Docker
-Dockerfile.dev spawns up a dev server with nodemon for development.
-
-Dockerfile is for deployment.
-
-Add your mongoDB connection url in docker-compose.yaml.

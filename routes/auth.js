@@ -74,6 +74,110 @@ router.post('/login', [
   .notEmpty()
 ], authController.login);
 
+router.post("/sign_in_with_apple", [
+  body('token')
+    .trim()
+    .notEmpty()
+], authController.signInWithApple);
+
+router.post("/sign_up_with_apple", [
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email.')
+    .custom((value, {
+      req
+    }) => {
+      return User.findOne({
+        email: value
+      }).then(userDoc => {
+        if (userDoc) {
+          return Promise.reject('E-Mail address already registered!');
+        }
+      });
+    })
+    .normalizeEmail(),
+  body('password')
+    .trim()
+    .isLength({
+      min: 5
+    }),
+  body('firstName')
+    .trim()
+    .notEmpty(),
+  body('lastName')
+    .trim()
+    .notEmpty(),
+  body('phoneNumber')
+    .trim()
+    .notEmpty()
+    .custom((value, {
+      req
+    }) => {
+      return User.findOne({
+        phoneNumber: value
+      }).then(userDoc => {
+        if (userDoc) {
+          return Promise.reject('Phone number already registered!');
+        }
+      });
+    }),
+  body('token')
+    .trim()
+    .notEmpty()
+], authController.signUpWithApple);
+
+router.post("/sign_in_with_google", [
+  body('token')
+    .trim()
+    .notEmpty()
+], authController.signInWithGoogle);
+
+router.post("/sign_up_with_google", [
+  body('email')
+    .isEmail()
+    .withMessage('Please enter a valid email.')
+    .custom((value, {
+      req
+    }) => {
+      return User.findOne({
+        email: value
+      }).then(userDoc => {
+        if (userDoc) {
+          return Promise.reject('E-Mail address already registered!');
+        }
+      });
+    })
+    .normalizeEmail(),
+  body('password')
+    .trim()
+    .isLength({
+      min: 5
+    }),
+  body('firstName')
+    .trim()
+    .notEmpty(),
+  body('lastName')
+    .trim()
+    .notEmpty(),
+  body('phoneNumber')
+    .trim()
+    .notEmpty()
+    .custom((value, {
+      req
+    }) => {
+      return User.findOne({
+        phoneNumber: value
+      }).then(userDoc => {
+        if (userDoc) {
+          return Promise.reject('Phone number already registered!');
+        }
+      });
+    }),
+  body('token')
+    .trim()
+    .notEmpty()
+], authController.signUpWithGoogle);
+
 router.get('/sendVerificationEmail', isAuth, authController.sendVerificationEmail);
 
 router.get('/verifyEmail/:token', authController.verifyEmail);
@@ -91,7 +195,7 @@ router.get('/emailAvailability/:email', authController.getEmailAvailability);
 
 router.get('/phoneNumberAvailability/:phoneNumber', authController.getPhoneNumberAvailability);
 
-router.get('/publicKey/:kid', authController.getPublicKey);
+router.get('/publicKey', authController.getPublicKey);
 
 router.post('/refreshToken', [
   body('accessToken')

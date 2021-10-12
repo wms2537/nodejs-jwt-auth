@@ -8,8 +8,12 @@ services:
     volumes:
       - /app/node_modules
       - ./:/app
-    expose: 
-      - 80
+    ports: 
+      - 8081:80
     environment:
-      - DATABASE_URL=YOUR_MONGODB_DATABASE_CONNECTION_URL
-      - NUM_KEYS=5
+      DATABASE_URL: ${DATABASE_URL}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      VIRTUAL_HOST: ${VIRTUAL_HOST}
+      HCAPTCHA_HOST: ${HCAPTCHA_HOST}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
