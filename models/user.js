@@ -45,6 +45,13 @@ const userSchema = new Schema({
   },
   appleAuthId: {
     type: String,
+  },
+  otpSecret: {
+    type: String,
+  },
+  enable2FA: {
+    type: Boolean,
+    default: false,
   }
 }, {
   timestamps: true

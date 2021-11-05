@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.post(
   '/signup', [
-    body('email')
+  body('email')
     .isEmail()
     .withMessage('Please enter a valid email.')
     .custom((value, {
@@ -28,18 +28,18 @@ router.post(
       });
     })
     .normalizeEmail(),
-    body('password')
+  body('password')
     .trim()
     .isLength({
       min: 5
     }),
-    body('firstName')
+  body('firstName')
     .trim()
     .notEmpty(),
-    body('lastName')
+  body('lastName')
     .trim()
     .notEmpty(),
-    body('phoneNumber')
+  body('phoneNumber')
     .trim()
     .notEmpty()
     .custom((value, {
@@ -53,32 +53,32 @@ router.post(
         }
       });
     }),
-    body('token')
+  body('token')
     .trim()
     .notEmpty()
-  ],
+],
   authController.signup
 );
 
-router.post('/login', [
+router.post('/sign_in_with_email_password', [
   body('email')
-  .notEmpty()
-  .trim(),
+    .notEmpty()
+    .trim(),
   body('password')
-  .trim()
-  .isLength({
-    min: 5
-  }),
+    .trim()
+    .isLength({
+      min: 5
+    }),
   body('token')
-  .trim()
-  .notEmpty()
-], authController.login);
+    .trim()
+    .notEmpty()
+], authController.signInWithEmailPassword, authController.handleSignIn);
 
 router.post("/sign_in_with_apple", [
   body('token')
     .trim()
     .notEmpty()
-], authController.signInWithApple);
+], authController.signInWithApple, authController.handleSignIn);
 
 router.post("/sign_up_with_apple", [
   body('email')
@@ -130,7 +130,7 @@ router.post("/sign_in_with_google", [
   body('token')
     .trim()
     .notEmpty()
-], authController.signInWithGoogle);
+], authController.signInWithGoogle, authController.handleSignIn);
 
 router.post("/sign_up_with_google", [
   body('email')
@@ -178,6 +178,23 @@ router.post("/sign_up_with_google", [
     .notEmpty()
 ], authController.signUpWithGoogle);
 
+router.post('/enable2FA', isAuth, authController.enable2FA);
+
+router.post('/disable2FA', isAuth, authController.disable2FA);
+
+router.post('/setupOtp', isAuth, authController.setupOtp);
+
+router.post('/disableOtp', isAuth, authController.disableOtp);
+
+router.post("/validateOtp", [
+  body('email')
+    .notEmpty()
+    .trim(),
+  body('token')
+    .trim()
+    .notEmpty()
+], authController.validateOtp, authController.handleSignIn);
+
 router.get('/sendVerificationEmail', isAuth, authController.sendVerificationEmail);
 
 router.get('/verifyEmail/:token', authController.verifyEmail);
@@ -199,11 +216,11 @@ router.get('/publicKey', authController.getPublicKey);
 
 router.post('/refreshToken', [
   body('accessToken')
-  .notEmpty()
-  .trim(),
+    .notEmpty()
+    .trim(),
   body('refreshToken')
-  .notEmpty()
-  .trim()
+    .notEmpty()
+    .trim()
 ], authController.refreshToken);
 
 

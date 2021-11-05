@@ -24,7 +24,6 @@ exports.isAuth = async (req, res, next) => {
       throw error;
     }
     req.userId = payload['userId'];
-    console.log(req.userId);
     next();
   } catch (err) {
     if(!err.statusCode){

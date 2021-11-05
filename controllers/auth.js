@@ -11,9 +11,11 @@ const { SignJWT } = require('jose/jwt/sign');
 const { createRemoteJWKSet } = require('jose/jwks/remote');
 const { jwtVerify } = require('jose/jwt/verify');
 const { OAuth2Client } = require('google-auth-library');
+const { authenticator } = require('otplib');
+const qrcode = require('qrcode');
 
 // const JWT_SECRET = fs.readFileSync('./.private/rsaPrivateKey.key');
-const ACCESS_TOKEN_EXPIRY = 24*3600*1000;
+const ACCESS_TOKEN_EXPIRY = 24 * 3600 * 1000;
 const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000;
 const User = require('../models/user');
 const Token = require('../models/token');
@@ -23,7 +25,12 @@ const { getSuccessTemplate, getFailedTemplate } = require('../templates/template
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-exports.signup = async(req, res, next) => {
+authenticator.options = { 
+  digits: 6,
+  algorithm: 'sha256'
+};
+
+exports.signup = async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -70,7 +77,54 @@ exports.signup = async(req, res, next) => {
   }
 };
 
-exports.login = async(req, res, next) => {
+exports.handleSignIn = async (req, res, next) => {
+  try {
+    const jwks = JSON.parse((await fs.readFile(path.join(__dirname, '..', '.private', 'keys.json'))).toString());
+    const jwk = jwks[Math.floor(Math.random() * jwks.length)];
+    const privateKey = await importJWK(jwk, 'EdDSA');
+    const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_EXPIRY);
+    const accessToken = await new SignJWT({
+      email: req.user.email,
+      userId: req.user._id.toString(),
+    })
+      .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
+      .setIssuedAt()
+      .setIssuer('wmtech')
+      .setAudience('auth.wmtech.cc')
+      .setExpirationTime(accessTokenExpiry.getTime())
+      .sign(privateKey);
+    const refreshToken = crypto.randomBytes(128).toString('base64');
+    const mytoken = Token({
+      accessToken,
+      refreshToken,
+      userId: req.user._id
+    });
+    await mytoken.save();
+    res.status(200).json({
+      accessToken,
+      refreshToken,
+      userId: req.user._id.toString(),
+      accessTokenExpiry: accessTokenExpiry.toISOString(),
+      refreshTokenExpiry: (new Date(Date.now() + REFRESH_TOKEN_EXPIRY)).toISOString(),
+      email: req.user.email,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
+      phoneNumber: req.user.phoneNumber,
+      activeStatus: req.user.activeStatus,
+      googleAuthEnabled: req.user.googleAuthId !== undefined,
+      appleAuthEnabled: req.user.appleAuthId !== undefined,
+      otpAuthEnabled: req.user.otpSecret !== undefined,
+      enable2FA: req.user.enable2FA,
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+}
+
+exports.signInWithEmailPassword = async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -111,40 +165,11 @@ exports.login = async(req, res, next) => {
       error.statusCode = 401;
       throw error;
     }
-    const jwks = JSON.parse((await fs.readFile(path.join(__dirname, '..', '.private', 'keys.json'))).toString());
-    const jwk = jwks[Math.floor(Math.random() * jwks.length)];
-    const privateKey = await importJWK(jwk, 'EdDSA');
-    const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_EXPIRY);
-    const accessToken = await new SignJWT({
-      email: user.email,
-      userId: user._id.toString(),
-     })
-      .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
-      .setIssuedAt()
-      .setIssuer('wmtech')
-      .setAudience('auth.wmtech.cc')
-      .setExpirationTime(accessTokenExpiry.getTime())
-      .sign(privateKey);
-    const refreshToken = crypto.randomBytes(128).toString('base64');
-    const mytoken = Token({
-      accessToken,
-      refreshToken,
-      userId: user._id
-    });
-    await mytoken.save();
-    res.status(200).json({
-      accessToken,
-      refreshToken,
-      userId: user._id.toString(),
-      accessTokenExpiry: accessTokenExpiry.toISOString(),
-      refreshTokenExpiry: (new Date(Date.now() + REFRESH_TOKEN_EXPIRY)).toISOString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      activeStatus: user.activeStatus,
-      googleAuthEnabled: user.googleAuthId !== undefined,
-      appleAuthEnabled: user.appleAuthId !== undefined,
-    });
+    if(user.enable2FA) {
+      return res.status(200).json({ message: 'otp' });
+    }
+    req.user = user;
+    next();
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -164,7 +189,7 @@ exports.signInWithApple = async (req, res, next) => {
     }
     const JWKS = createRemoteJWKSet(new URL('https://appleid.apple.com/auth/keys'));
     const { payload } = await jwtVerify(req.body.token, JWKS);
-    if(!payload['email_verified']) {
+    if (!payload['email_verified']) {
       const error = new Error('Email not verified (Apple)!');
       error.statusCode = 401;
       throw error;
@@ -173,42 +198,10 @@ exports.signInWithApple = async (req, res, next) => {
       email: payload['email']
     });
     if (!user) {
-      return res.status(200).json({message: 'Sign Up'});
+      return res.status(200).json({ message: 'Sign Up' });
     }
-    const jwks = JSON.parse((await fs.readFile(path.join(__dirname, '..', '.private', 'keys.json'))).toString());
-    const jwk = jwks[Math.floor(Math.random() * jwks.length)];
-    const privateKey = await importJWK(jwk, 'EdDSA');
-    const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_EXPIRY);
-    const accessToken = await new SignJWT({
-      email: user.email,
-      userId: user._id.toString(),
-    })
-      .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
-      .setIssuedAt()
-      .setIssuer('wmtech')
-      .setAudience('auth.wmtech.cc')
-      .setExpirationTime(accessTokenExpiry.getTime())
-      .sign(privateKey);
-    const refreshToken = crypto.randomBytes(128).toString('base64');
-    const mytoken = Token({
-      accessToken,
-      refreshToken,
-      userId: user._id
-    });
-    await mytoken.save();
-    res.status(200).json({
-      accessToken,
-      refreshToken,
-      userId: user._id.toString(),
-      accessTokenExpiry: accessTokenExpiry.toISOString(),
-      refreshTokenExpiry: (new Date(Date.now() + REFRESH_TOKEN_EXPIRY)).toISOString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      activeStatus: user.activeStatus,
-      googleAuthEnabled: user.googleAuthId !== undefined,
-      appleAuthEnabled: user.appleAuthId !== undefined,
-    });
+    req.user = user;
+    next();
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -289,46 +282,14 @@ exports.signInWithGoogle = async (req, res, next) => {
       email: email
     });
     if (!user) {
-      return res.status(200).json({ 
+      return res.status(200).json({
         message: 'Sign Up',
         firstName: payload['given_name'],
         lastName: payload['family_name'],
       });
     }
-    const jwks = JSON.parse((await fs.readFile(path.join(__dirname, '..', '.private', 'keys.json'))).toString());
-    const jwk = jwks[Math.floor(Math.random() * jwks.length)];
-    const privateKey = await importJWK(jwk, 'EdDSA');
-    const accessTokenExpiry = new Date(Date.now() + ACCESS_TOKEN_EXPIRY);
-    const accessToken = await new SignJWT({
-      email: user.email,
-      userId: user._id.toString(),
-    })
-      .setProtectedHeader({ alg: 'EdDSA', kid: jwk.kid })
-      .setIssuedAt()
-      .setIssuer('wmtech')
-      .setAudience('auth.wmtech.cc')
-      .setExpirationTime(accessTokenExpiry.getTime())
-      .sign(privateKey);
-    const refreshToken = crypto.randomBytes(128).toString('base64');
-    const mytoken = Token({
-      accessToken,
-      refreshToken,
-      userId: user._id
-    });
-    await mytoken.save();
-    res.status(200).json({
-      accessToken,
-      refreshToken,
-      userId: user._id.toString(),
-      accessTokenExpiry: accessTokenExpiry.toISOString(),
-      refreshTokenExpiry: (new Date(Date.now() + REFRESH_TOKEN_EXPIRY)).toISOString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      activeStatus: user.activeStatus,
-      googleAuthEnabled: user.googleAuthId !== undefined,
-      appleAuthEnabled: user.appleAuthId !== undefined,
-    });
+    req.user = user;
+    next();
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -385,20 +346,172 @@ exports.signUpWithGoogle = async (req, res, next) => {
   }
 };
 
-exports.getPublicKey = async(req, res, next) => {
+exports.setupOtp = async (req, res, next) => {
   try {
-    const keyPath = path.join(__dirname, '..', '.public', 'keys.json')
-    const publicKeys = JSON.parse((await fs.readFile(keyPath)).toString());
-    res.status(200).json({keys: publicKeys});
+    const user = await User.findById(req.userId);
+    if (!user) {
+      const error = new Error('User not found.');
+      error.statusCode = 401;
+      throw error;
+    }
+    if (!user.emailVerified) {
+      const error = new Error('Email not verified, please verify on your email!');
+      error.statusCode = 401;
+      throw error;
+    }
+    const secret = authenticator.generateSecret(32);
+    user.otpSecret = secret;
+    await user.save();
+    const service = 'WMTech Auth';
+    const otpauth = authenticator.keyuri(user.email, service, secret);
+    const url = await qrcode.toDataURL(otpauth);
+    res.status(200).json({
+      token: url,
+    });
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
     }
     next(err);
   }
-}
+};
 
-exports.sendVerificationEmail = async(req, res, next) => {
+exports.disableOtp = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      const error = new Error('User not found.');
+      error.statusCode = 401;
+      throw error;
+    }
+    if (!user.emailVerified) {
+      const error = new Error('Email not verified, please verify on your email!');
+      error.statusCode = 401;
+      throw error;
+    }
+    user.otpSecret = undefined;
+    await user.save();
+    res.status(200).json({
+      message: 'Success!'
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.enable2FA = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      const error = new Error('User not found.');
+      error.statusCode = 401;
+      throw error;
+    }
+    if (!user.emailVerified) {
+      const error = new Error('Email not verified, please verify on your email!');
+      error.statusCode = 401;
+      throw error;
+    }
+    user.enable2FA = true;
+    await user.save();
+    res.status(200).json({
+      message: 'Success!'
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.disable2FA = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.userId);
+    if (!user) {
+      const error = new Error('User not found.');
+      error.statusCode = 401;
+      throw error;
+    }
+    if (!user.emailVerified) {
+      const error = new Error('Email not verified, please verify on your email!');
+      error.statusCode = 401;
+      throw error;
+    }
+    user.enable2FA = false;
+    await user.save();
+    res.status(200).json({
+      message: 'Success!'
+    });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.validateOtp = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      const error = new Error('Validation failed.');
+      error.statusCode = 422;
+      error.data = errors.array().map(e => `Error in ${e.param}: ${e.msg}`).join('\n');
+      throw error;
+    }
+    const token = req.body.token;
+    const user = await User.findOne({
+      email: req.body.email
+    });
+    if (!user) {
+      const error = new Error('A user with this email could not be found.');
+      error.statusCode = 401;
+      throw error;
+    }
+    if (!user.emailVerified) {
+      const error = new Error('Email not verified, please verify on your email!');
+      error.statusCode = 401;
+      throw error;
+    }
+    if (!user.otpSecret) {
+      const error = new Error('OTP Auth not enabled for your account!');
+      error.statusCode = 401;
+      throw error;
+    }
+    const isValid = authenticator.verify({ token, secret: user.otpSecret });
+    if(!isValid) {
+      const error = new Error('Invalid OTP!');
+      error.statusCode = 401;
+      throw error;
+    }
+    req.user = user;
+    next();
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.getPublicKey = async (req, res, next) => {
+  try {
+    const keyPath = path.join(__dirname, '..', '.public', 'keys.json');
+    const publicKeys = JSON.parse((await fs.readFile(keyPath)).toString());
+    res.status(200).json({ keys: publicKeys });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
+  }
+};
+
+exports.sendVerificationEmail = async (req, res, next) => {
   try {
     const userId = req.userId;
     const user = await User.findById(userId);
@@ -418,9 +531,9 @@ exports.sendVerificationEmail = async(req, res, next) => {
     }
     next(err);
   }
-}
+};
 
-exports.verifyEmail = async(req, res, next) => {
+exports.verifyEmail = async (req, res, next) => {
   try {
     const token = req.params.token.split(':');
     const userId = token.shift();
@@ -452,7 +565,7 @@ exports.verifyEmail = async(req, res, next) => {
   }
 };
 
-exports.sendPasswordResetEmail = async(req, res, next) => {
+exports.sendPasswordResetEmail = async (req, res, next) => {
   try {
     const token = req.body.token;
     const tokenValidationResult = await validateToken(token);
@@ -482,9 +595,9 @@ exports.sendPasswordResetEmail = async(req, res, next) => {
     }
     next(err);
   }
-}
+};
 
-exports.resetPassword = async(req, res, next) => {
+exports.resetPassword = async (req, res, next) => {
   try {
     const token = req.params.token.split(':');
     const userId = token.shift();
@@ -511,9 +624,9 @@ exports.resetPassword = async(req, res, next) => {
     }
     next(err);
   }
-}
+};
 
-exports.getEmailAvailability = async(req, res, next) => {
+exports.getEmailAvailability = async (req, res, next) => {
   try {
     const email = req.params.email;
     const user = await User.findOne({
@@ -533,9 +646,9 @@ exports.getEmailAvailability = async(req, res, next) => {
     }
     next(err);
   }
-}
+};
 
-exports.getPhoneNumberAvailability = async(req, res, next) => {
+exports.getPhoneNumberAvailability = async (req, res, next) => {
   try {
     const phoneNumber = req.params.phoneNumber;
     const user = await User.findOne({
@@ -555,9 +668,9 @@ exports.getPhoneNumberAvailability = async(req, res, next) => {
     }
     next(err);
   }
-}
+};
 
-exports.refreshToken = async(req, res, next) => {
+exports.refreshToken = async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
