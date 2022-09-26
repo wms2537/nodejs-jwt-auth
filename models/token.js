@@ -13,7 +13,7 @@ const tokenSchema = new Schema({
   },
   refreshToken: {
     type: String,
-    reqired: true
+    required: true
   },
   device: {
     type: String
